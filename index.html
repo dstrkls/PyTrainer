@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pro Typing Trainer - Lesson Selector</title>
+
+<style>
+body{
+    margin:0;
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    background:#1e1e1e;
+    font-family: 'Cascadia Code', 'Courier New', monospace;
+}
+
+/* top */
+.top{
+    padding:10px;
+    background:#2d2d2d;
+    display:flex;
+    gap:10px;
+    align-items: center;
+    border-bottom: 1px solid #333;
+}
+
+/* تنسيق القائمة المنسدلة */
+select {
+    padding: 8px;
+    background: #3c3c3c;
+    color: white;
+    border: 1px solid #555;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+    min-width: 150px;
+}
+
+button{
+    padding: 8px 16px;
+    background:#007acc;
+    color:white;
+    border:none;
+    cursor:pointer;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+button:hover{ background:#005fa3; }
+
+/* main container */
+.main{
+    flex:1;
+    display:flex;
+    overflow: hidden;
+}
+
+.area{
+    width:50%;
+    height: 100%;
+    display:flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.inputArea{ border-right:2px solid #333; }
+
+.label{
+    background: #252526;
+    color: #858585;
+    padding: 5px 15px;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+textarea{
+    flex: 1;
+    background:#111;
+    color:white;
+    border:none;
+    outline:none;
+    font-size:20px;
+    line-height:1.6;
+    resize:none;
+    padding:20px;
+    white-space: pre;
+    overflow: auto;
+}
+
+.preview{
+    flex: 1;
+    padding:20px;
+    font-size:22px;
+    line-height:1.6;
+    background:#1a1a1a;
+    overflow:auto;
+}
+
+.line {
+    display: block;
+    min-height: 1.6em;
+}
+
+.char{
+    white-space: pre;
+}
+
+.correct{ color:#00ff88; }
+
+.current{
+    background: #f1c40f;
+    color: black;
+    border-radius: 2px;
+}
+
+#msg{
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #007acc;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    display: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    z-index: 100;
+}
+</style>
+</head>
+
+<body>
+
+<div class="top">
+    <!-- قائمة اختيار الدروس -->
+    <select id="lessonSelect" onchange="changeLesson()">
+        <option value="">Select Lesson...</option>
+    </select>
+    
+    <button onclick="start()">Start Training</button>
+    <button onclick="explainCode()">Explain</button>
+    <button onclick="resetAll()">Reset</button>
+</div>
+
+<div class="main">
+    <div class="area inputArea">
+        <div class="label">Your Input</div>
+        <textarea id="input" spellcheck="false" placeholder="Select a lesson first..." disabled></textarea>
+    </div>
+
+    <div class="area">
+        <div class="label">Target Code</div>
+        <div id="preview" class="preview"></div>
+    </div>
+</div>
+
+<div id="msg"></div>
+
+<script src="lessons.js"></script>
+
+<script>
+let lessons = [];
+let currentLesson = null;
+let index = 0;
+let started = false;
+
+const input = document.getElementById("input");
+const preview = document.getElementById("preview");
+const msg = document.getElementById("msg");
+const lessonSelect = document.getElementById("lessonSelect");
+
+/* 1. تحميل الدروس وتعبئة القائمة */
+window.onload = function() {
+    if(typeof window.lessons === "undefined"){
+        alert("lessons.js not loaded!");
+        return;
+    }
+    
+    lessons = window.lessons;
+    
+    // تعبئة القائمة المنسدلة تلقائياً
+    lessons.forEach((lesson, i) => {
+        let opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = `Lesson ${i + 1}`; // يمكنك تغيير هذا ليكون اسم الدرس لو أضفت خاصية title في الـ JS
+        lessonSelect.appendChild(opt);
+    });
+};
+
+/* 2. تغيير الدرس عند الاختيار من القائمة */
+function changeLesson() {
+    let selectedIdx = lessonSelect.value;
+    if(selectedIdx === "") return;
+    
+    currentLesson = lessons[selectedIdx];
+    resetAll(); // إعادة ضبط كل شيء عند تغيير الدرس
+}
+
+/* 3. عرض الكود */
+function render(){
+    if(!currentLesson) return;
+
+    preview.innerHTML = "";
+    let code = currentLesson.code;
+    
+    let currentLineDiv = document.createElement("div");
+    currentLineDiv.className = "line";
+
+    for(let i=0; i<code.length; i++){
+        let char = code[i];
+
+        if(char === "\n"){
+            preview.appendChild(currentLineDiv);
+            currentLineDiv = document.createElement("div");
+            currentLineDiv.className = "line";
+            
+            if(i === index) {
+                let enterSign = document.createElement("span");
+                enterSign.innerHTML = " ↵";
+                enterSign.className = "current";
+                enterSign.style.opacity = "0.5";
+                currentLineDiv.appendChild(enterSign);
+            }
+            continue;
+        }
+
+        let span = document.createElement("span");
+        span.textContent = char;
+        span.className = "char";
+
+        if(i < index) span.classList.add("correct");
+        else if(i === index) span.classList.add("current");
+
+        currentLineDiv.appendChild(span);
+    }
+    preview.appendChild(currentLineDiv);
+}
+
+/* 4. التحكم */
+function start(){
+    if(!currentLesson){
+        alert("Please select a lesson from the list first!");
+        return;
+    }
+    index = 0;
+    started = true;
+    input.value = "";
+    input.disabled = false;
+    input.focus();
+    render();
+}
+
+function explainCode(){
+    if(!currentLesson) return;
+    msg.style.display = "block";
+    msg.innerText = "💡 " + currentLesson.explain;
+    setTimeout(() => msg.style.display="none", 5000);
+}
+
+function resetAll(){
+    index = 0;
+    started = false;
+    input.value = "";
+    input.disabled = true;
+    render();
+}
+
+/* 5. منطق الكتابة */
+input.addEventListener("input", (e) => {
+    if(!started) return;
+
+    let code = currentLesson.code;
+    let typedText = input.value;
+    
+    if(typedText.length < index) {
+        input.value = code.slice(0, index);
+        return;
+    }
+
+    let lastChar = typedText[typedText.length - 1];
+    let expected = code[index];
+
+    if(lastChar === expected){
+        index++;
+    } else {
+        input.style.background = "#451a1a";
+        setTimeout(() => input.style.background = "#111", 100);
+        input.value = code.slice(0, index);
+    }
+
+    render();
+
+    const currentElem = document.querySelector(".current");
+    if(currentElem) currentElem.scrollIntoView({ block: "nearest" });
+
+    if(index >= code.length){
+        alert("🎉 Done! You finished the lesson.");
+        input.disabled = true;
+        started = false;
+    }
+});
+</script>
+
+</body>
+</html>
