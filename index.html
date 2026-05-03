@@ -24,7 +24,6 @@ body{
     border-bottom: 1px solid #333;
 }
 
-/* تنسيق القائمة المنسدلة */
 select {
     padding: 8px;
     background: #3c3c3c;
@@ -33,7 +32,7 @@ select {
     border-radius: 4px;
     outline: none;
     cursor: pointer;
-    min-width: 200px; /* جعل العرض أكبر قليلاً ليناسب العناوين */
+    min-width: 200px;
 }
 
 button{
@@ -48,7 +47,6 @@ button{
 
 button:hover{ background:#005fa3; }
 
-/* main container */
 .main{
     flex:1;
     display:flex;
@@ -96,34 +94,58 @@ textarea{
     overflow:auto;
 }
 
+/* تعديل تنسيق السطر ليحتوي على الكود والشرح */
 .line {
-    display: block;
+    display: flex;
+    justify-content: flex-start;
+    align-items: baseline;
     min-height: 1.6em;
+    border-bottom: 1px solid #252526;
+}
+
+.code-part {
+    white-space: pre;
+}
+
+/* تنسيق ملاحظات الأسطر */
+.line-note {
+    color: #6a9955; /* لون تعليقات البرمجة أخضر هادئ */
+    font-size: 14px;
+    margin-left: 30px;
+    font-style: italic;
+    white-space: nowrap;
+    opacity: 0.8;
 }
 
 .char{
     white-space: pre;
+    color: #007acc; 
 }
 
-.correct{ color:#00ff88; }
+.correct{ 
+    color: #00ff88; 
+}
 
 .current{
-    background: #f1c40f;
-    color: black;
-    border-radius: 2px;
+    background: none;
+    color: #f1c40f;
+    font-weight: bold;
+    border-bottom: 2px solid #f1c40f;
 }
 
 #msg{
     position: fixed;
     bottom: 20px;
     right: 20px;
-    background: #007acc;
+    background: #005fa3;
     color: white;
-    padding: 10px 20px;
-    border-radius: 5px;
+    padding: 15px 25px;
+    border-radius: 8px;
     display: none;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.4);
     z-index: 100;
+    border: 1px solid #00d9ff;
+    font-weight: bold;
 }
 </style>
 </head>
@@ -131,13 +153,12 @@ textarea{
 <body>
 
 <div class="top">
-    <!-- قائمة اختيار الدروس -->
     <select id="lessonSelect" onchange="changeLesson()">
         <option value="">Choose a Lesson...</option>
     </select>
     
     <button onclick="start()">Start Training</button>
-    <button onclick="explainCode()">Explain</button>
+    <button onclick="explainCode()">Explain Topic</button>
     <button onclick="resetAll()">Reset</button>
 </div>
 
@@ -148,7 +169,7 @@ textarea{
     </div>
 
     <div class="area">
-        <div class="label">Target Code</div>
+        <div class="label">Target Code & Explanations</div>
         <div id="preview" class="preview"></div>
     </div>
 </div>
@@ -168,7 +189,6 @@ const preview = document.getElementById("preview");
 const msg = document.getElementById("msg");
 const lessonSelect = document.getElementById("lessonSelect");
 
-/* 1. تحميل الدروس وتعبئة القائمة */
 window.onload = function() {
     if(typeof window.lessons === "undefined"){
         alert("lessons.js not loaded!");
@@ -177,49 +197,66 @@ window.onload = function() {
     
     lessons = window.lessons;
     
-    // تعبئة القائمة المنسدلة تلقائياً
     lessons.forEach((lesson, i) => {
         let opt = document.createElement("option");
         opt.value = i;
-        // التعديل هنا: استخدام title الدرس بدلاً من مجرد أرقام
         opt.textContent = lesson.title ? lesson.title : `Lesson ${i + 1}`;
         lessonSelect.appendChild(opt);
     });
 };
 
-/* 2. تغيير الدرس عند الاختيار من القائمة */
 function changeLesson() {
     let selectedIdx = lessonSelect.value;
     if(selectedIdx === "") return;
     
     currentLesson = lessons[selectedIdx];
-    resetAll(); // إعادة ضبط كل شيء عند تغيير الدرس
+    resetAll();
 }
 
-/* 3. عرض الكود */
 function render(){
     if(!currentLesson) return;
 
     preview.innerHTML = "";
     let code = currentLesson.code;
+    let notes = currentLesson.lineNotes || []; // مصفوفة الشروحات لكل سطر
     
     let currentLineDiv = document.createElement("div");
     currentLineDiv.className = "line";
+
+    let codePart = document.createElement("div");
+    codePart.className = "code-part";
+    currentLineDiv.appendChild(codePart);
+
+    let lineCounter = 0;
 
     for(let i=0; i<code.length; i++){
         let char = code[i];
 
         if(char === "\n"){
+            // إضافة الشرح للسطر الحالي قبل الانتقال للسطر الجديد
+            if(notes[lineCounter]){
+                let noteSpan = document.createElement("span");
+                noteSpan.className = "line-note";
+                noteSpan.textContent = " // " + notes[lineCounter];
+                currentLineDiv.appendChild(noteSpan);
+            }
+
             preview.appendChild(currentLineDiv);
+            lineCounter++;
+
+            // سطر جديد
             currentLineDiv = document.createElement("div");
             currentLineDiv.className = "line";
+            codePart = document.createElement("div");
+            codePart.className = "code-part";
+            currentLineDiv.appendChild(codePart);
             
             if(i === index) {
                 let enterSign = document.createElement("span");
                 enterSign.innerHTML = " ↵";
                 enterSign.className = "current";
                 enterSign.style.opacity = "0.5";
-                currentLineDiv.appendChild(enterSign);
+                codePart.appendChild(enterSign);
             }
             continue;
         }
@@ -231,12 +268,19 @@ function render(){
         if(i < index) span.classList.add("correct");
         else if(i === index) span.classList.add("current");
 
-        currentLineDiv.appendChild(span);
+        codePart.appendChild(span);
+    }
+
+    // للسطر الأخير
+    if(notes[lineCounter]){
+        let noteSpan = document.createElement("span");
+        noteSpan.className = "line-note";
+        noteSpan.textContent = " // " + notes[lineCounter];
+        currentLineDiv.appendChild(noteSpan);
     }
     preview.appendChild(currentLineDiv);
 }
 
-/* 4. التحكم */
 function start(){
     if(!currentLesson){
         alert("Please select a lesson from the list first!");
@@ -265,7 +309,6 @@ function resetAll(){
     render();
 }
 
-/* 5. منطق الكتابة */
 input.addEventListener("input", (e) => {
     if(!started) return;
 
