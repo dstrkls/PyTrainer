@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>DSTR - Auto Lesson Manager</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: white; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: #1e1e1e; padding: 25px; border-radius: 12px; border: 1px solid #333; }
+        h2 { color: #007acc; text-align: center; }
+        .step-label { display: block; margin-top: 15px; color: #858585; font-size: 14px; }
+        input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #333; border-radius: 8px; background: #252526; color: #fff; box-sizing: border-box; outline: none; }
+        input:focus, textarea:focus { border-color: #007acc; }
+        textarea { height: 120px; font-family: 'Cascadia Code', monospace; direction: ltr; }
+        .notes-area { background: #2d2d2d; padding: 15px; border-radius: 8px; margin: 15px 0; display: none; border-right: 4px solid #007acc; }
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        button { flex: 1; padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; font-size: 16px; }
+        .btn-send { background: #007acc; color: white; }
+        .btn-send:hover { background: #005fa3; transform: translateY(-2px); }
+        .btn-clear { background: #e74c3c; color: white; flex: 0.4; }
+        .btn-clear:hover { background: #c0392b; }
+        #statusMsg { text-align: center; margin-top: 15px; font-weight: bold; color: #00ff88; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>إضافة دروس لبرنامج التدريب 🚀</h2>
+    
+    <label class="step-label">العنوان:</label>
+    <input type="text" id="title" placeholder="مثلاً: Lists & Tuples">
+    
+    <label class="step-label">الكود البرمجي (Python):</label>
+    <textarea id="code" placeholder="اكتب الكود هنا..." oninput="updateRows()"></textarea>
+    
+    <label class="step-label">شرح عام للدرس:</label>
+    <input type="text" id="explain" placeholder="اشرح للمستخدم ماذا يفعل هذا الكود">
+
+    <div id="notesContainer" class="notes-area">
+        <p style="font-size: 14px; color: #007acc; margin-top: 0;">شرح الأسطر الجانبي:</p>
+        <div id="rowsInputs"></div>
+    </div>
+
+    <div class="btn-group">
+        <button class="btn-send" onclick="sendToStorage()">إرسال الدرس للمدرب تلقائياً ✅</button>
+        <button class="btn-clear" onclick="clearAllData()">مسح كل الدروس الإضافية 🗑️</button>
+    </div>
+
+    <div id="statusMsg">تم إرسال الدرس! افتح صفحة المدرب لتجربته.</div>
+</div>
+
+<script>
+    function updateRows() {
+        const code = document.getElementById('code').value;
+        const container = document.getElementById('notesContainer');
+        const inputs = document.getElementById('rowsInputs');
+        // نفصل الأسطر ونتجاهل الفارغة تماماً
+        const lines = code.split('\n');
+
+        if(code.trim() !== "") {
+            container.style.display = "block";
+            inputs.innerHTML = "";
+            lines.forEach((line, i) => {
+                inputs.innerHTML += `
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
+                        <span style="font-size:12px; color:#555; min-width:50px;">سطر ${i+1}</span>
+                        <input type="text" class="ln-input" style="margin:0;" placeholder="شرح السطر: ${line.substring(0,20)}...">
+                    </div>`;
+            });
+        } else {
+            container.style.display = "none";
+        }
+    }
+
+    function sendToStorage() {
+        const title = document.getElementById('title').value;
+        const code = document.getElementById('code').value;
+        const explain = document.getElementById('explain').value;
+        const noteInputs = document.querySelectorAll('.ln-input');
+
+        if(!title || !code) {
+            alert("يرجى ملء العنوان والكود على الأقل.");
+            return;
+        }
+
+        // تحويل شروحات الأسطر إلى مصفوفة نصوص
+        let notes = Array.from(noteInputs).map(i => i.value || "");
+
+        const newLesson = {
+            title: title,
+            code: code,
+            explain: explain,
+            lineNotes: notes
+        };
+
+        // جلب الدروس القديمة من localStorage
+        let currentLessons = JSON.parse(localStorage.getItem('add_lessons')) || [];
+        
+        // إضافة الدرس الجديد
+        currentLessons.push(newLesson);
+        
+        // حفظ القائمة المحدثة
+        localStorage.setItem('add_lessons', JSON.stringify(currentLessons));
+
+        // إظهار رسالة النجاح
+        const msg = document.getElementById('statusMsg');
+        msg.style.display = "block";
+        setTimeout(() => { 
+            msg.style.display = "none";
+            // تصفير الخانات لإضافة درس آخر
+            document.getElementById('title').value = "";
+            document.getElementById('code').value = "";
+            document.getElementById('explain').value = "";
+            document.getElementById('notesContainer').style.display = "none";
+        }, 3000);
+    }
+
+    function clearAllData() {
+        if(confirm("هل أنت متأكد من مسح جميع الدروس الإضافية التي أضفتها؟")) {
+            localStorage.removeItem('add_lessons');
+            alert("تم مسح الذاكرة بنجاح.");
+        }
+    }
+</script>
+
+</body>
+</html>
