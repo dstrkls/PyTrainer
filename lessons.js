@@ -1,7 +1,7 @@
 window.lessons = [
     {
         title: "Print & Variables",
-        code: `name = "Gemini"
+        code: `name = "dstr"
 age = 2026
 print("Hello", name)
 print("Year:", age)`,
