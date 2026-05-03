@@ -33,7 +33,7 @@ select {
     border-radius: 4px;
     outline: none;
     cursor: pointer;
-    min-width: 150px;
+    min-width: 200px; /* جعل العرض أكبر قليلاً ليناسب العناوين */
 }
 
 button{
@@ -133,7 +133,7 @@ textarea{
 <div class="top">
     <!-- قائمة اختيار الدروس -->
     <select id="lessonSelect" onchange="changeLesson()">
-        <option value="">Select Lesson...</option>
+        <option value="">Choose a Lesson...</option>
     </select>
     
     <button onclick="start()">Start Training</button>
@@ -181,7 +181,8 @@ window.onload = function() {
     lessons.forEach((lesson, i) => {
         let opt = document.createElement("option");
         opt.value = i;
-        opt.textContent = `Lesson ${i + 1}`; // يمكنك تغيير هذا ليكون اسم الدرس لو أضفت خاصية title في الـ JS
+        // التعديل هنا: استخدام title الدرس بدلاً من مجرد أرقام
+        opt.textContent = lesson.title ? lesson.title : `Lesson ${i + 1}`;
         lessonSelect.appendChild(opt);
     });
 };
